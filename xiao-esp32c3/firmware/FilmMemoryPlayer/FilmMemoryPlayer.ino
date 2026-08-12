@@ -58,6 +58,7 @@ constexpr int PIN_TFT_MOSI = 10;      // GPIO10 / D10
 
 constexpr uint16_t DISPLAY_W = 128;   // 128x128 解析度
 constexpr uint16_t DISPLAY_H = 128;
+constexpr uint32_t TFT_SPI_HZ = 27000000; // 跳線接法使用穩定且足夠快的 27 MHz
 constexpr uint8_t ENCODER_STEPS_PER_DETENT = 4;
 constexpr uint32_t DEBOUNCE_MS = 30;
 constexpr uint32_t MENU_HOLD_MS = 1200;        // 長按 1.2 秒開啟／返回主選單
@@ -65,7 +66,7 @@ constexpr uint32_t POWER_OFF_HOLD_MS = 3500;   // 持續長按 3.5 秒休眠關�
 constexpr uint32_t BUTTON_AFTER_ROTATION_GUARD_MS = 500;
 constexpr uint8_t MAX_PHOTOS = 50;
 
-constexpr uint32_t SLIDE_INTERVALS_MS[] = {2000, 5000, 10000, 30000};
+constexpr uint32_t SLIDE_INTERVALS_MS[] = {2000, 3500, 5000, 10000, 30000};
 constexpr uint16_t AUTO_SLEEP_MINUTES[] = {0, 1, 3, 5};
 constexpr uint8_t OPTION_COUNT = 4;
 
@@ -491,8 +492,8 @@ const char INDEX_HTML[] PROGMEM = R"FILMHTML(
 // Adafruit 將面板偏移函式設為 protected；用小型衍生類別提供 128x128 零偏移設定。
 class FilmMemoryST7789 : public Adafruit_ST7789 {
 public:
-  FilmMemoryST7789(int8_t cs, int8_t dc, int8_t mosi, int8_t sclk, int8_t rst)
-      : Adafruit_ST7789(cs, dc, mosi, sclk, rst) {}
+  FilmMemoryST7789(SPIClass *spi, int8_t cs, int8_t dc, int8_t rst)
+      : Adafruit_ST7789(spi, cs, dc, rst) {}
 
   void use128x128ZeroOffset() {
     setColRowStart(0, 0);
@@ -500,9 +501,13 @@ public:
   }
 };
 
-FilmMemoryST7789 tft(PIN_TFT_CS, PIN_TFT_DC, PIN_TFT_MOSI, PIN_TFT_SCK, PIN_TFT_RST);
+FilmMemoryST7789 tft(&SPI, PIN_TFT_CS, PIN_TFT_DC, PIN_TFT_RST);
 WebServer server(80);
 Preferences preferences;
+
+// JPEG 先完整解碼到 RAM，再一次推送到 TFT，避免看見一塊一塊的解碼過程。
+// 128 x 128 x 2 bytes = 32 KB，XIAO ESP32-C3 不需額外記憶體即可容納。
+uint16_t photoFrame[DISPLAY_W * DISPLAY_H];
 
 enum class AppMode : uint8_t {
   PHOTO,
@@ -585,12 +590,13 @@ void drawClock() {
   localtime_r(&now, &localTime);
   char timeText[9];
   char dateText[11];
+  static const char *WEEKDAYS[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
   strftime(timeText, sizeof(timeText), "%H:%M:%S", &localTime);
   strftime(dateText, sizeof(dateText), "%Y-%m-%d", &localTime);
   tft.fillScreen(ST77XX_BLACK);
   drawCentered(timeText, 35, 2, ST77XX_WHITE);
   drawCentered(dateText, 72, 1, ST77XX_CYAN);
-  drawCentered("HOLD FOR MENU", 108, 1, ST77XX_ORANGE);
+  drawCentered(WEEKDAYS[localTime.tm_wday], 108, 1, ST77XX_ORANGE);
 }
 
 void drawSettings() {
@@ -640,13 +646,11 @@ bool tftJpegOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitma
   const uint16_t drawW = (x + w > DISPLAY_W) ? (DISPLAY_W - x) : w;
   const uint16_t drawH = (y + h > DISPLAY_H) ? (DISPLAY_H - y) : h;
 
-  // 若右側需要裁切，逐列繪製才能保留來源 bitmap 原本的列寬。
-  if (drawW == sourceW) {
-    tft.drawRGBBitmap(x, y, bitmap, drawW, drawH);
-  } else {
-    for (uint16_t row = 0; row < drawH; ++row) {
-      tft.drawRGBBitmap(x, y + row, bitmap + row * sourceW, drawW, 1);
-    }
+  // TJpg_Decoder 會分區塊呼叫此函式；只複製到離屏畫布，不直接更新 TFT。
+  for (uint16_t row = 0; row < drawH; ++row) {
+    memcpy(photoFrame + (y + row) * DISPLAY_W + x,
+           bitmap + row * sourceW,
+           drawW * sizeof(uint16_t));
   }
   return true;
 }
@@ -657,8 +661,16 @@ void drawPhoto() {
     showMessage("NO PHOTOS", "HOLD FOR MENU");
     return;
   }
-  tft.fillScreen(ST77XX_BLACK);
-  TJpgDec.drawFsJpg(0, 0, photos[currentPhoto].c_str(), LittleFS);
+  memset(photoFrame, 0, sizeof(photoFrame));
+  const JRESULT decodeResult =
+      TJpgDec.drawFsJpg(0, 0, photos[currentPhoto].c_str(), LittleFS);
+  if (decodeResult != JDR_OK) {
+    showMessage("PHOTO ERROR", "JPEG " + String(static_cast<int>(decodeResult)));
+    return;
+  }
+
+  // 單一 SPI transaction 推送完整畫面；使用者只會看到完成後的照片。
+  tft.drawRGBBitmap(0, 0, photoFrame, DISPLAY_W, DISPLAY_H);
 }
 
 void scanPhotos() {
@@ -1066,7 +1078,7 @@ void pollButton() {
     if (appMode != AppMode::MENU) openMainMenu();
   }
 
-  // 繼續按住到 3.5 秒才休眠關機（即使已進入 Wi-Fi 也有效）。
+  // 繼續按住到 3.5 秒才休眠關機。
   if (buttonStable == LOW && !longPressHandled &&
       (now - buttonPressedAt >= POWER_OFF_HOLD_MS)) {
     longPressHandled = true;
@@ -1096,7 +1108,10 @@ void setup() {
   pinMode(PIN_ENCODER_B, INPUT_PULLUP);
   pinMode(PIN_ENCODER_SW, INPUT_PULLUP); // 啟用 D6 (GPIO 21) 內部上拉電阻
 
+  // 保留原接線，但改用 ESP32-C3 硬體 SPI，完整 128x128 畫面約十多毫秒送完。
+  SPI.begin(PIN_TFT_SCK, -1, PIN_TFT_MOSI, PIN_TFT_CS);
   tft.init(DISPLAY_W, DISPLAY_H);
+  tft.setSPISpeed(TFT_SPI_HZ);
   // 這塊 128x128 ST7789 的可視記憶體從 (0,0) 開始。
   // Adafruit 對其他尺寸會自動置中，必須覆寫成與 test.ino 相同的 0~127。
   tft.use128x128ZeroOffset();
