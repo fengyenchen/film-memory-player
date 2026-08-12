@@ -18,6 +18,7 @@
 ## Arduino IDE 設定
 
 - 開發板：`XIAO_ESP32C3`
+- USB CDC On Boot：`Enabled`
 - 上傳檔案：`test_screen.ino`
 - 這個測試直接傳送顯示指令，不需要額外顯示函式庫。
 

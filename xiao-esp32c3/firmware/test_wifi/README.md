@@ -11,6 +11,7 @@
 ## Arduino IDE 設定
 
 - 開發板：`XIAO_ESP32C3`
+- USB CDC On Boot：`Enabled`
 - Serial Monitor：`115200 baud`
 - 上傳檔案：`test_wifi.ino`
 

@@ -10,7 +10,9 @@
  *   - 向右旋轉：下一張照片
  *   - 向左旋轉：上一張照片
  *   - 短按旋鈕：開啟／停止自動播放
- *   - 長按約 1.5 秒後放開：開啟 Wi-Fi 照片管理頁
+ *   - 長按約 1.2 秒後放開：開啟主選單／返回主選單
+ *   - 主選單包含：相片、時鐘、Wi-Fi 管理與設定
+ *   - 相片模式短按旋鈕：開啟／停止幻燈片
  *   - 持續按住約 3.5 秒：關閉背光；放開後進入低功耗休眠
  *   - 休眠時按一下旋鈕並放開：重新啟動並恢復照片播放
  *
@@ -37,8 +39,11 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
 #include <TJpg_Decoder.h>
+#include <Preferences.h>
 #include <esp_sleep.h>
 #include <driver/gpio.h>
+#include <sys/time.h>
+#include <time.h>
 
 // ---------- 腳位定義 (XIAO ESP32-C3) ----------
 constexpr int PIN_TFT_BL = 2;         // GPIO2 / D0 (背光: HIGH=亮)
@@ -55,11 +60,14 @@ constexpr uint16_t DISPLAY_W = 128;   // 128x128 解析度
 constexpr uint16_t DISPLAY_H = 128;
 constexpr uint8_t ENCODER_STEPS_PER_DETENT = 4;
 constexpr uint32_t DEBOUNCE_MS = 30;
-constexpr uint32_t WIFI_HOLD_MS = 1500;        // 長按 1.5 秒進入 Wi-Fi
+constexpr uint32_t MENU_HOLD_MS = 1200;        // 長按 1.2 秒開啟／返回主選單
 constexpr uint32_t POWER_OFF_HOLD_MS = 3500;   // 持續長按 3.5 秒休眠關機
-constexpr uint32_t AUTOPLAY_INTERVAL_MS = 3500;
 constexpr uint32_t BUTTON_AFTER_ROTATION_GUARD_MS = 500;
 constexpr uint8_t MAX_PHOTOS = 50;
+
+constexpr uint32_t SLIDE_INTERVALS_MS[] = {2000, 5000, 10000, 30000};
+constexpr uint16_t AUTO_SLEEP_MINUTES[] = {0, 1, 3, 5};
+constexpr uint8_t OPTION_COUNT = 4;
 
 const char *AP_SSID = "FilmMemory-Setup";
 const char *AP_PASSWORD = "film2026";
@@ -464,6 +472,15 @@ const char INDEX_HTML[] PROGMEM = R"FILMHTML(
                 await refresh(true);
             }
         };
+        async function syncClock() {
+            try {
+                await fetch('/time?epoch=' + Math.floor(Date.now() / 1000), { method: 'POST' });
+            } catch (_) {
+                // 相片管理仍可使用；下次開啟網頁會再次同步。
+            }
+        }
+
+        syncClock();
         refresh(false);
     </script>
 </body>
@@ -485,6 +502,23 @@ public:
 
 FilmMemoryST7789 tft(PIN_TFT_CS, PIN_TFT_DC, PIN_TFT_MOSI, PIN_TFT_SCK, PIN_TFT_RST);
 WebServer server(80);
+Preferences preferences;
+
+enum class AppMode : uint8_t {
+  PHOTO,
+  CLOCK,
+  WIFI,
+  SETTINGS,
+  MENU
+};
+
+constexpr uint8_t MENU_ITEM_COUNT = 4;
+const char *MENU_LABELS[MENU_ITEM_COUNT] = {"PHOTO", "CLOCK", "WI-FI", "SETTINGS"};
+AppMode appMode = AppMode::PHOTO;
+uint8_t menuSelection = 0;
+uint8_t settingsSelection = 0;
+uint8_t slideIntervalIndex = 1;
+uint8_t autoSleepIndex = 0;
 
 String photos[MAX_PHOTOS];
 uint8_t photoCount = 0;
@@ -496,6 +530,8 @@ bool autoplay = false;
 bool sleeping = false;
 uint32_t lastSlideAt = 0;
 uint32_t lastEncoderActionAt = 0;
+uint32_t lastUserActionAt = 0;
+uint32_t lastClockDrawAt = 0;
 
 uint8_t encoderPrevious = 0;
 int8_t encoderAccumulated = 0;
@@ -503,7 +539,7 @@ bool buttonLastReading = HIGH;
 bool buttonStable = HIGH;
 uint32_t buttonChangedAt = 0;
 uint32_t buttonPressedAt = 0;
-bool wifiHoldHandled = false;
+bool menuHoldHandled = false;
 bool longPressHandled = false;
 
 File uploadFile;
@@ -529,6 +565,73 @@ void showMessage(const String &title, const String &detail = "") {
   if (detail.length()) drawCentered(detail, 45, 1, ST77XX_CYAN);
 }
 
+void drawMenu() {
+  tft.fillScreen(ST77XX_BLACK);
+  drawCentered("SELECT MODE", 12, 1, ST77XX_WHITE);
+  const String label = String("<") + MENU_LABELS[menuSelection] + ">";
+  drawCentered(label, 48, 2, ST77XX_ORANGE);
+  drawCentered(String(menuSelection + 1) + " / " + String(MENU_ITEM_COUNT), 91, 1, ST77XX_CYAN);
+  drawCentered("PRESS TO ENTER", 108, 1, ST77XX_WHITE);
+}
+
+void drawClock() {
+  lastClockDrawAt = millis();
+  const time_t now = time(nullptr);
+  if (now < 1700000000) {
+    showMessage("CLOCK NOT SET", "OPEN WI-FI");
+    return;
+  }
+  struct tm localTime;
+  localtime_r(&now, &localTime);
+  char timeText[9];
+  char dateText[11];
+  strftime(timeText, sizeof(timeText), "%H:%M:%S", &localTime);
+  strftime(dateText, sizeof(dateText), "%Y-%m-%d", &localTime);
+  tft.fillScreen(ST77XX_BLACK);
+  drawCentered(timeText, 35, 2, ST77XX_WHITE);
+  drawCentered(dateText, 72, 1, ST77XX_CYAN);
+  drawCentered("HOLD FOR MENU", 108, 1, ST77XX_ORANGE);
+}
+
+void drawSettings() {
+  tft.fillScreen(ST77XX_BLACK);
+  drawCentered("SETTINGS", 8, 1, ST77XX_WHITE);
+  const uint16_t active = ST77XX_ORANGE;
+  const uint16_t inactive = ST77XX_WHITE;
+  drawCentered(String(settingsSelection == 0 ? "> " : "  ") + "SLIDE " +
+                   String(SLIDE_INTERVALS_MS[slideIntervalIndex] / 1000) + " SEC",
+               38, 1, settingsSelection == 0 ? active : inactive);
+  String sleepValue = AUTO_SLEEP_MINUTES[autoSleepIndex] == 0
+                          ? "OFF"
+                          : String(AUTO_SLEEP_MINUTES[autoSleepIndex]) + " MIN";
+  drawCentered(String(settingsSelection == 1 ? "> " : "  ") + "SLEEP " + sleepValue,
+               62, 1, settingsSelection == 1 ? active : inactive);
+  drawCentered("TURN TO CHANGE", 94, 1, ST77XX_CYAN);
+  drawCentered("PRESS: NEXT", 108, 1, ST77XX_WHITE);
+}
+
+void stopSetupServer() {
+  if (!setupMode) return;
+  server.stop();
+  WiFi.mode(WIFI_OFF);
+  setupMode = false;
+}
+
+void saveSettings() {
+  preferences.putUChar("slide", slideIntervalIndex);
+  preferences.putUChar("sleep", autoSleepIndex);
+}
+
+void showCurrentMode();
+
+void openMainMenu() {
+  stopSetupServer();
+  autoplay = false;
+  appMode = AppMode::MENU;
+  lastUserActionAt = millis();
+  drawMenu();
+}
+
 bool tftJpegOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) {
   // false 代表「停止整張 JPEG 解碼」，超出畫面的區塊只能略過並回傳 true。
   if (x >= DISPLAY_W || y >= DISPLAY_H) return true;
@@ -551,7 +654,7 @@ bool tftJpegOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitma
 void drawPhoto() {
   if (setupMode || sleeping) return;
   if (!fileSystemReady || photoCount == 0) {
-    showMessage("NO PHOTOS", "Hold 1.5s for WiFi");
+    showMessage("NO PHOTOS", "HOLD FOR MENU");
     return;
   }
   tft.fillScreen(ST77XX_BLACK);
@@ -668,6 +771,21 @@ void handleClear() {
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
+void handleTimeSync() {
+  if (!server.hasArg("epoch")) {
+    server.send(400, "application/json", "{\"ok\":false,\"error\":\"Missing epoch\"}");
+    return;
+  }
+  const time_t epoch = static_cast<time_t>(strtoll(server.arg("epoch").c_str(), nullptr, 10));
+  if (epoch < 1700000000) {
+    server.send(400, "application/json", "{\"ok\":false,\"error\":\"Invalid time\"}");
+    return;
+  }
+  timeval value = {epoch, 0};
+  settimeofday(&value, nullptr);
+  server.send(200, "application/json", "{\"ok\":true}");
+}
+
 void handleUploadBody() {
   HTTPUpload &upload = server.upload();
   if (upload.status == UPLOAD_FILE_START) {
@@ -723,6 +841,7 @@ void handleUploadDone() {
 }
 
 void startSetupServer() {
+  appMode = AppMode::WIFI;
   setupMode = true;
   
   // 先關閉再開啟，確保 Wi-Fi 晶片乾淨重啟
@@ -747,6 +866,7 @@ void startSetupServer() {
     server.on("/photo", HTTP_GET, handlePhoto);
     server.on("/delete", HTTP_POST, handleDelete);
     server.on("/clear", HTTP_POST, handleClear);
+    server.on("/time", HTTP_POST, handleTimeSync);
     server.on("/upload", HTTP_POST, handleUploadDone, handleUploadBody);
     server.on("/", HTTP_GET, []() {
       server.sendHeader("Cache-Control", "no-store");
@@ -757,8 +877,42 @@ void startSetupServer() {
   server.begin();
 }
 
+void showCurrentMode() {
+  switch (appMode) {
+    case AppMode::PHOTO: drawPhoto(); break;
+    case AppMode::CLOCK: drawClock(); break;
+    case AppMode::WIFI:
+      if (!setupMode) startSetupServer();
+      break;
+    case AppMode::SETTINGS: drawSettings(); break;
+    case AppMode::MENU: drawMenu(); break;
+  }
+}
+
+void enterSelectedMode() {
+  lastUserActionAt = millis();
+  switch (menuSelection) {
+    case 0:
+      appMode = AppMode::PHOTO;
+      drawPhoto();
+      break;
+    case 1:
+      appMode = AppMode::CLOCK;
+      drawClock();
+      break;
+    case 2:
+      startSetupServer();
+      break;
+    default:
+      appMode = AppMode::SETTINGS;
+      settingsSelection = 0;
+      drawSettings();
+      break;
+  }
+}
+
 void changePhoto(int direction) {
-  if (photoCount == 0) return;
+  if (appMode != AppMode::PHOTO || photoCount == 0) return;
   int next = int(currentPhoto) + direction;
   if (next < 0) next = photoCount - 1;
   if (next >= photoCount) next = 0;
@@ -830,16 +984,44 @@ void enterSleep() {
 
 void pollEncoder() {
   const uint8_t state = (digitalRead(PIN_ENCODER_A) << 1) | digitalRead(PIN_ENCODER_B);
-  if (state != encoderPrevious) lastEncoderActionAt = millis();
+  if (state != encoderPrevious) {
+    lastEncoderActionAt = millis();
+    lastUserActionAt = millis();
+  }
   const uint8_t transition = (encoderPrevious << 2) | state;
   static const int8_t table[16] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0};
   encoderAccumulated += table[transition & 0x0F];
   encoderPrevious = state;
 
+  int8_t direction = 0;
   if (encoderAccumulated >= ENCODER_STEPS_PER_DETENT) {
-    encoderAccumulated = 0; changePhoto(1);
+    encoderAccumulated = 0;
+    direction = 1;
   } else if (encoderAccumulated <= -ENCODER_STEPS_PER_DETENT) {
-    encoderAccumulated = 0; changePhoto(-1);
+    encoderAccumulated = 0;
+    direction = -1;
+  }
+  if (direction == 0) return;
+
+  switch (appMode) {
+    case AppMode::PHOTO:
+      changePhoto(direction);
+      break;
+    case AppMode::MENU:
+      menuSelection = (menuSelection + MENU_ITEM_COUNT + direction) % MENU_ITEM_COUNT;
+      drawMenu();
+      break;
+    case AppMode::SETTINGS:
+      if (settingsSelection == 0) {
+        slideIntervalIndex = (slideIntervalIndex + OPTION_COUNT + direction) % OPTION_COUNT;
+      } else {
+        autoSleepIndex = (autoSleepIndex + OPTION_COUNT + direction) % OPTION_COUNT;
+      }
+      saveSettings();
+      drawSettings();
+      break;
+    default:
+      break;
   }
 }
 
@@ -852,32 +1034,36 @@ void pollButton() {
     buttonStable = reading;
     if (buttonStable == LOW) {
       buttonPressedAt = now;
-      wifiHoldHandled = false;
+      lastUserActionAt = now;
+      menuHoldHandled = false;
       longPressHandled = false;
-    } else if (!wifiHoldHandled && !longPressHandled) {
-      // 短按切換：如果在 Wi-Fi 模式，短按會退出並進入相片播放
-      if (setupMode) {
-        setupMode = false;
-        server.stop();
-        WiFi.mode(WIFI_OFF);
+    } else if (!menuHoldHandled && !longPressHandled) {
+      lastUserActionAt = now;
+      if (appMode == AppMode::WIFI || setupMode) {
+        stopSetupServer();
+        appMode = AppMode::MENU;
         scanPhotos();
-        drawPhoto();
-      } else {
+        drawMenu();
+      } else if (appMode == AppMode::MENU) {
+        enterSelectedMode();
+      } else if (appMode == AppMode::PHOTO) {
         if (now - lastEncoderActionAt >= BUTTON_AFTER_ROTATION_GUARD_MS) {
           autoplay = !autoplay;
           lastSlideAt = millis();
-        } else {
-          Serial.println("Short press ignored after encoder rotation");
+          Serial.printf("Slideshow: %s\n", autoplay ? "ON" : "OFF");
         }
+      } else if (appMode == AppMode::SETTINGS) {
+        settingsSelection = (settingsSelection + 1) % 2;
+        drawSettings();
       }
     }
   }
 
-  // 正常播放時直接長按 1.5 秒開啟 Wi-Fi 管理頁。
-  if (buttonStable == LOW && !wifiHoldHandled &&
-      (now - buttonPressedAt >= WIFI_HOLD_MS)) {
-    wifiHoldHandled = true;
-    if (!setupMode) startSetupServer();
+  // 長按 1.2 秒開啟主選單；從任一模式都使用同一個返回手勢。
+  if (buttonStable == LOW && !menuHoldHandled &&
+      (now - buttonPressedAt >= MENU_HOLD_MS)) {
+    menuHoldHandled = true;
+    if (appMode != AppMode::MENU) openMainMenu();
   }
 
   // 繼續按住到 3.5 秒才休眠關機（即使已進入 Wi-Fi 也有效）。
@@ -892,6 +1078,14 @@ void pollButton() {
 void setup() {
   Serial.begin(115200);
   delay(500);
+
+  setenv("TZ", "CST-8", 1);
+  tzset();
+  preferences.begin("film-memory", false);
+  slideIntervalIndex = preferences.getUChar("slide", 1);
+  autoSleepIndex = preferences.getUChar("sleep", 0);
+  if (slideIntervalIndex >= OPTION_COUNT) slideIntervalIndex = 1;
+  if (autoSleepIndex >= OPTION_COUNT) autoSleepIndex = 0;
 
   // 若前一次休眠鎖住背光腳，開機時先解除，再由程式正常控制。
   gpio_hold_dis(static_cast<gpio_num_t>(PIN_TFT_BL));
@@ -928,6 +1122,8 @@ void setup() {
   LittleFS.mkdir("/photos");
   scanPhotos();
 
+  appMode = AppMode::PHOTO;
+  lastUserActionAt = millis();
   drawPhoto();
 }
 
@@ -941,10 +1137,22 @@ void loop() {
   }
 
   pollEncoder();
-  if (autoplay && photoCount > 1 && millis() - lastSlideAt >= AUTOPLAY_INTERVAL_MS) {
+  const uint32_t now = millis();
+
+  if (appMode == AppMode::CLOCK && now - lastClockDrawAt >= 1000) {
+    drawClock();
+  }
+
+  if (appMode == AppMode::PHOTO && autoplay && photoCount > 1 &&
+      now - lastSlideAt >= SLIDE_INTERVALS_MS[slideIntervalIndex]) {
     currentPhoto = (currentPhoto + 1) % photoCount;
-    lastSlideAt = millis();
+    lastSlideAt = now;
     drawPhoto();
+  }
+
+  const uint16_t sleepMinutes = AUTO_SLEEP_MINUTES[autoSleepIndex];
+  if (sleepMinutes > 0 && now - lastUserActionAt >= uint32_t(sleepMinutes) * 60000UL) {
+    enterSleep();
   }
   delay(1);
 }

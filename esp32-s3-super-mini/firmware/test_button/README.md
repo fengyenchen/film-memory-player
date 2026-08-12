@@ -13,6 +13,7 @@
 
 - 開發板：`ESP32S3 Dev Module`
 - USB CDC On Boot：`Enabled`
+- Partition Scheme：`Custom`
 - Serial Monitor：`115200 baud`
 - 上傳檔案：`test_button.ino`
 
