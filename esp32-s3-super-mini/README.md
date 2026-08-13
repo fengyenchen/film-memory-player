@@ -41,15 +41,10 @@ film_memory_player/
 │  ├─ test_screen/                   TFT 紅色畫面測試
 │  ├─ test_wifi/                     Wi-Fi 熱點測試
 │  └─ README.md                      韌體重點
-├─ cad/
-│  ├─ film_memory_player.blend       完整可編輯 Blender 模型
-│  └─ parts/                         3D 列印零件
-│     ├─ 1.stl
-│     ├─ 2.stl
-│     ├─ 3.stl
-│     └─ 4.stl
 └─ TFT 顯示器驅動與函式庫調整/         面板參數參考資料
 ```
+
+外殼的 STL 檔可到專案最外層的 [`3d-print-parts/`](../3d-print-parts/) 取得。
 
 ## 建議流程
 

@@ -9,4 +9,17 @@
 | XIAO ESP32-C3 | Seeed Studio XIAO ESP32-C3 | [進入專案](xiao-esp32c3/README.md) |
 | ESP32-S3 Super Mini | 具 B+ / B- 電池焊盤的 ESP32-S3 Super Mini | [進入專案](esp32-s3-super-mini/README.md) |
 
-每個版本都包含各自的韌體、接線說明、材料清單、TFT 設定與外殼檔案。 
+每個版本都包含各自的韌體、接線說明、材料清單與 TFT 設定。外殼的 STL 檔可到 [`3d-print-parts/`](3d-print-parts/) 取得。
+
+## 資料夾導覽
+
+```text
+.
+├─ 3d-print-parts/          外殼的 3D 列印零件
+│  ├─ 1.stl
+│  ├─ 2.stl
+│  ├─ 3.stl
+│  └─ 4.stl
+├─ xiao-esp32c3/            XIAO ESP32-C3 版本
+└─ esp32-s3-super-mini/     ESP32-S3 Super Mini 版本
+```
