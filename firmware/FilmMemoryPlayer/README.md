@@ -1,6 +1,6 @@
-# Film Memory Player 韌體｜ESP32-S3 Super Mini
+# Film Memory Player 共用韌體
 
-這個資料夾是 Film Memory Player 的 **ESP32-S3 Super Mini 完整韌體**。程式使用 128×128 SPI TFT、EC11 旋轉編碼器與板載 LittleFS，提供照片播放、時鐘、表情、Wi-Fi 相簿管理、設定與休眠功能。
+這是共用的正式韌體。程式會依 Arduino IDE 選擇的編譯目標，自動在 `Config.h` 套用對應 GPIO。使用 128×128 SPI TFT、EC11 旋轉編碼器與板載 LittleFS，提供照片播放、時鐘、表情、Wi-Fi 相簿管理、設定與休眠功能。
 
 ## 功能
 
@@ -17,14 +17,14 @@
 
 ### 1. 安裝開發板套件
 
-在 Arduino IDE 的 Boards Manager 安裝 Espressif 的 `esp32` 套件，然後設定：
+在 Arduino IDE 的 Boards Manager 安裝 Espressif 的 `esp32` 套件，再依開發板設定：
 
-| 選項 | 設定 |
-| --- | --- |
-| Board | `ESP32S3 Dev Module` |
-| USB CDC On Boot | `Enabled` |
-| Partition Scheme | `Custom` |
-| Serial Monitor | `115200 baud` |
+| 選項 | ESP32-S3 Super Mini | XIAO ESP32-C3 |
+| --- | --- | --- |
+| Board | `ESP32S3 Dev Module` | `ESP32C3 Dev Module` |
+| USB CDC On Boot | `Enabled` | `Enabled` |
+| Partition Scheme | `Custom` | `Custom` |
+| Serial Monitor | `115200 baud` | `115200 baud` |
 
 ### 2. 安裝函式庫
 
@@ -41,7 +41,7 @@
 1. 保持這個資料夾名稱為 `FilmMemoryPlayer`。
 2. 確認所有 `.cpp`、`.h`、`.ino` 與 `partitions.csv` 都在同一個資料夾。
 3. 使用 Arduino IDE 開啟 [FilmMemoryPlayer.ino](FilmMemoryPlayer.ino)。
-4. 套用上方開發板選項。
+4. 依實際硬體選擇開發版，程式會自動套用對應接腳。
 5. 選擇正確的 USB 連接埠。
 6. 按下 Verify 確認可以編譯。
 7. 按下 Upload 燒錄。
@@ -49,7 +49,7 @@
 
 若無法進入燒錄模式：
 
-1. 按住 BOOT。
+1. 按住開發板的 BOOT。
 2. 按一下 RESET。
 3. 放開 BOOT。
 4. 再次執行 Upload。
@@ -108,8 +108,6 @@
 - 單張刪除或清空全部照片。
 - 裝置時間同步。
 
-
-
 Wi-Fi 模式是本機 SoftAP，不需要網際網路。手機若提示「此網路無網際網路」，仍可保持連線並開啟 `192.168.4.1`。
 
 ## 資料夾結構
@@ -117,7 +115,7 @@ Wi-Fi 模式是本機 SoftAP，不需要網際網路。手機若提示「此網�
 ```text
 FilmMemoryPlayer/
 ├─ FilmMemoryPlayer.ino   # setup()、loop() 與初始化流程
-├─ Config.h               # ESP32-S3 GPIO、尺寸與常數
+├─ Config.h               # 自動選擇 S3/C3 GPIO，以及共用尺寸與常數
 ├─ AppState.h/.cpp        # 共用狀態、TFT、WebServer、Preferences
 ├─ DisplayUtils.h/.cpp    # 背光、置中文字與訊息畫面
 ├─ PhotoMode.h/.cpp       # JPEG、照片掃描、顯示與切換
@@ -128,7 +126,7 @@ FilmMemoryPlayer/
 ├─ WifiManager.h/.cpp     # Wi-Fi、上傳、刪除與時間同步
 ├─ WebPage.h/.cpp         # 內嵌管理網頁
 ├─ Encoder.h/.cpp         # EC11 旋轉、短按與長按
-├─ PowerManager.h/.cpp    # 休眠與喚醒
+├─ PowerManager.h/.cpp    # 休眠與按鍵喚醒
 ├─ partitions.csv         # 4 MB Flash 自訂分割表
 └─ README.md
 ```

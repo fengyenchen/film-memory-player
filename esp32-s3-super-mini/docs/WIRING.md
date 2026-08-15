@@ -27,7 +27,7 @@ USB-C 線直接插入開發板，另一端接一般 5V USB 充電器。只使用
 
 ---
 
-## 螢幕模組 (ST7789 128x128 SPI TFT)
+## 螢幕模組 (ST7735S 128x128 SPI TFT)
 
 這塊螢幕使用 SPI 通訊。背光由 ESP32-S3 Super Mini 的 GPIO1 直接控制。
 

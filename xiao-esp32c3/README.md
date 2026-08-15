@@ -6,7 +6,8 @@ Film Memory Player 是一個以「旋轉底片」為互動概念的數位照片�
 
 - 左右旋轉 EC11 切換上一張或下一張照片。
 - 短按旋鈕開啟或停止自動播放。
-- 長按約 1.5 秒開啟 Wi-Fi 相片管理頁。
+- 長按約 1.2 秒開啟主選單或返回主選單。
+- 主選單可選擇相片、時鐘、表情、Wi-Fi 管理與設定。
 - 從手機或電腦一次選擇多張照片上傳。
 - 網頁會將照片裁切並縮放成 128×128 JPEG。
 - 相片列表提供縮圖、日期時間檔名與單張刪除。
@@ -29,18 +30,16 @@ Film Memory Player 是一個以「旋轉底片」為互動概念的數位照片�
 
 ```text
 film_memory_player/
-├─ docs/
-│  ├─ BOM.md                         材料清單
-│  └─ WIRING.md                      接線指南
-├─ firmware/
-│  ├─ FilmMemoryPlayer/              正式韌體
-│  │  ├─ FilmMemoryPlayer.ino
-│  │  └─ partitions.csv
-│  ├─ test_button/                   EC11 按壓測試
-│  ├─ test_screen/                   TFT 紅色畫面測試
-│  ├─ test_wifi/                     Wi-Fi 熱點測試
-│  └─ README.md                      韌體重點
-└─ TFT 顯示器驅動與函式庫調整/         面板參數參考資料
+├─ firmware/FilmMemoryPlayer/        S3 與 C3 共用的正式韌體
+└─ xiao-esp32c3/
+   ├─ docs/
+   │  ├─ BOM.md                      材料清單
+   │  └─ WIRING.md                   接線指南
+   ├─ firmware/
+   │  ├─ test_button/                EC11 按壓測試
+   │  ├─ test_screen/                TFT 紅色畫面測試
+   │  └─ test_wifi/                  Wi-Fi 熱點測試
+   └─ TFT 顯示器驅動與函式庫調整/      面板參數參考資料
 ```
 
 外殼的 STL 檔可到專案最外層的 [`3d-print-parts/`](../3d-print-parts/) 取得。
@@ -52,6 +51,7 @@ film_memory_player/
 在 Arduino IDE 中安裝 ESP32 開發板支援，並選擇：
 
 - 開發板：`ESP32C3 Dev Module`
+- USB CDC On Boot：`Enabled`
 - Flash Size：`4MB`
 - Partition Scheme：`Custom`
 - Serial Monitor：`115200 baud`
@@ -78,7 +78,7 @@ film_memory_player/
 
 ### 4. 燒錄正式韌體
 
-1. 開啟 `firmware/FilmMemoryPlayer/FilmMemoryPlayer.ino`。
+1. 開啟專案最外層的 [`firmware/FilmMemoryPlayer/FilmMemoryPlayer.ino`](../firmware/FilmMemoryPlayer/FilmMemoryPlayer.ino)。
 2. 確認同一個資料夾內保留 `partitions.csv`。
 3. 編譯並上傳。
 4. 上傳完成後按一下 XIAO Reset。
@@ -113,19 +113,20 @@ TFT VCC 接 `3V3`，TFT 與 EC11 的 GND 都接到 XIAO GND。詳細接法以 [W
 | 向右旋轉 | 下一張照片 |
 | 向左旋轉 | 上一張照片 |
 | 短按 | 開啟／停止自動播放 |
-| 長按約 1.5 秒後放開 | 開啟 Wi-Fi 管理頁 |
+| 長按約 1.2 秒後放開 | 開啟主選單／返回主選單 |
 | 持續按住約 3.5 秒 | 關閉背光並進入休眠 |
 | 休眠後按一下 | 重新啟動 |
 
 ## 上傳與管理照片
 
-1. 長按旋鈕約 1.5 秒，看到螢幕顯示 `WIFI READY` 後放開。
-2. 手機或電腦連接 Wi-Fi：
+1. 長按旋鈕約 1.2 秒後放開，進入主選單。
+2. 旋轉到 `WI-FI`，短按進入並等待畫面顯示 `WIFI READY`。
+3. 手機或電腦連接 Wi-Fi：
    - 預設名稱：`FilmMemory-Setup`
    - 預設密碼：`film2026`
-3. 瀏覽器開啟 `http://192.168.4.1`。
-4. 選擇照片並按下「裁切並上傳」。
-5. 在下方列表查看縮圖，或刪除指定照片。
-6. 在 Wi-Fi 模式短按旋鈕即可關閉 Wi-Fi 並回到照片播放。
+4. 瀏覽器開啟 `http://192.168.4.1`。
+5. 選擇照片並按下「裁切並上傳」。
+6. 在下方列表查看縮圖，或刪除指定照片。
+7. 在 Wi-Fi 模式短按旋鈕即可關閉 Wi-Fi 並回到主選單。
 
 手機顯示「此網路沒有網際網路」是正常的，請保持連線並直接開啟管理網址。

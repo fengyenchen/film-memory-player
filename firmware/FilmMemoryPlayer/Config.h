@@ -2,7 +2,22 @@
 
 #include <Arduino.h>
 
-// Seeed Studio XIAO ESP32-C3 pins
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+
+constexpr char BOARD_NAME[] = "ESP32-S3 Super Mini";
+constexpr int PIN_TFT_BL = 1;
+constexpr int PIN_TFT_RST = 2;
+constexpr int PIN_TFT_DC = 4;
+constexpr int PIN_TFT_CS = 5;
+constexpr int PIN_ENCODER_A = 6;
+constexpr int PIN_ENCODER_B = 7;
+constexpr int PIN_ENCODER_SW = 8;
+constexpr int PIN_TFT_SCK = 9;
+constexpr int PIN_TFT_MOSI = 10;
+
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+
+constexpr char BOARD_NAME[] = "Seeed Studio XIAO ESP32-C3";
 constexpr int PIN_TFT_BL = 2;       // D0
 constexpr int PIN_TFT_RST = 3;      // D1
 constexpr int PIN_TFT_DC = 4;       // D2
@@ -12,6 +27,10 @@ constexpr int PIN_ENCODER_B = 7;    // D5
 constexpr int PIN_ENCODER_SW = 21;  // D6
 constexpr int PIN_TFT_SCK = 8;      // D8
 constexpr int PIN_TFT_MOSI = 10;    // D10
+
+#else
+#error "Unsupported target: select ESP32S3 Dev Module or XIAO_ESP32C3/ESP32C3 Dev Module"
+#endif
 
 constexpr uint16_t DISPLAY_W = 128;
 constexpr uint16_t DISPLAY_H = 128;

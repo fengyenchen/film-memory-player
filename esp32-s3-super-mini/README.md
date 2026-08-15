@@ -7,7 +7,7 @@ Film Memory Player 是一個以「旋轉底片」為互動概念的數位照片�
 - 左右旋轉 EC11 切換上一張或下一張照片。
 - 短按旋鈕開啟或停止自動播放。
 - 長按約 1.2 秒開啟主選單或返回主選單。
-- 主選單可選擇相片、時鐘、Wi-Fi 管理與設定。
+- 主選單可選擇相片、時鐘、表情、Wi-Fi 管理與設定。
 - 從手機或電腦一次選擇多張照片上傳。
 - 網頁會將照片裁切並縮放成 128×128 JPEG。
 - 相片列表提供縮圖、日期時間檔名與單張刪除。
@@ -30,18 +30,16 @@ Film Memory Player 是一個以「旋轉底片」為互動概念的數位照片�
 
 ```text
 film_memory_player/
-├─ docs/
-│  ├─ BOM.md                         材料清單
-│  └─ WIRING.md                      接線指南
-├─ firmware/
-│  ├─ FilmMemoryPlayer/              正式韌體
-│  │  ├─ FilmMemoryPlayer.ino
-│  │  └─ partitions.csv
-│  ├─ test_button/                   EC11 按壓測試
-│  ├─ test_screen/                   TFT 紅色畫面測試
-│  ├─ test_wifi/                     Wi-Fi 熱點測試
-│  └─ README.md                      韌體重點
-└─ TFT 顯示器驅動與函式庫調整/         面板參數參考資料
+├─ firmware/FilmMemoryPlayer/        S3 與 C3 共用的正式韌體
+└─ esp32-s3-super-mini/
+   ├─ docs/
+   │  ├─ BOM.md                      材料清單
+   │  └─ WIRING.md                   接線指南
+   ├─ firmware/
+   │  ├─ test_button/                EC11 按壓測試
+   │  ├─ test_screen/                TFT 紅色畫面測試
+   │  └─ test_wifi/                  Wi-Fi 熱點測試
+   └─ TFT 顯示器驅動與函式庫調整/      面板參數參考資料
 ```
 
 外殼的 STL 檔可到專案最外層的 [`3d-print-parts/`](../3d-print-parts/) 取得。
@@ -81,7 +79,7 @@ film_memory_player/
 
 ### 4. 燒錄正式韌體
 
-1. 開啟 `firmware/FilmMemoryPlayer/FilmMemoryPlayer.ino`。
+1. 開啟專案最外層的 [`firmware/FilmMemoryPlayer/FilmMemoryPlayer.ino`](../firmware/FilmMemoryPlayer/FilmMemoryPlayer.ino)。
 2. 確認同一個資料夾內保留 `partitions.csv`。
 3. 編譯並上傳。
 4. 上傳完成後按一下開發板的 RESET。

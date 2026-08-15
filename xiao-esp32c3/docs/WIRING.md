@@ -26,7 +26,7 @@ XIAO 的官方充電電流約 380mA，電池必須允許此充電電流。
 
 ---
 
-## 螢幕模組 (ST7789 128x128 SPI TFT)
+## 螢幕模組 (ST7735S 128x128 SPI TFT)
 
 這塊螢幕使用 SPI 通訊，請確認 SCL 與 SDA 對應到 XIAO ESP32-C3 的硬體 SPI 腳位。背光由 XIAO GPIO2 直接控制。
 

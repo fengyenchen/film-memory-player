@@ -1,5 +1,5 @@
 /*
- * Film Memory Player — ESP32-S3 Super Mini
+ * Film Memory Player
  *
  * The sketch entry point coordinates initialization and the main loop.
  * Feature implementations live in the adjacent .cpp/.h modules.
@@ -43,9 +43,9 @@ void setup() {
 
   pinMode(PIN_ENCODER_A, INPUT_PULLUP);
   pinMode(PIN_ENCODER_B, INPUT_PULLUP);
-  pinMode(PIN_ENCODER_SW, INPUT_PULLUP); // 啟用 GPIO8 內部上拉電阻
+  pinMode(PIN_ENCODER_SW, INPUT_PULLUP);
 
-  // 保留原接線，但改用 ESP32-S3 硬體 SPI，完整 128x128 畫面約十多毫秒送完。
+  // 使用目前開發板的硬體 SPI，完整 128x128 畫面約十多毫秒送完。
   SPI.begin(PIN_TFT_SCK, -1, PIN_TFT_MOSI, PIN_TFT_CS);
   tft.init(DISPLAY_W, DISPLAY_H);
   tft.setSPISpeed(TFT_SPI_HZ);
