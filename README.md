@@ -1,6 +1,8 @@
 # Film Memory Player
 
-以旋轉底片為互動概念的數位照片播放器。本儲存庫收錄兩種 ESP32 開發板版本；兩者的接腳配置與燒錄設定不同，請依實際硬體選擇。
+以旋轉底片為互動概念的數位照片播放器。本儲存庫收錄 2 種開發板版本，它們的接腳配置與燒錄設定不同，請依實際硬體選擇。
+
+![](film_memory_player.png)
 
 ## 硬體版本
 
@@ -16,10 +18,6 @@
 ```text
 .
 ├─ 3d-print-parts/          外殼的 3D 列印零件
-│  ├─ 1.stl
-│  ├─ 2.stl
-│  ├─ 3.stl
-│  └─ 4.stl
 ├─ xiao-esp32c3/            XIAO ESP32-C3 版本
 └─ esp32-s3-super-mini/     ESP32-S3 Super Mini 版本
 ```
