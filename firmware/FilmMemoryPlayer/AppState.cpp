@@ -17,6 +17,7 @@ uint8_t menuSelection = 0;
 uint8_t settingsSelection = 0;
 uint8_t slideIntervalIndex = 1;
 uint8_t autoSleepIndex = 0;
+uint8_t brightnessIndex = BRIGHTNESS_OPTION_COUNT - 1;
 uint8_t currentExpression = 0;
 bool expressionSelectionDirty = false;
 uint32_t expressionSelectionChangedAt = 0;

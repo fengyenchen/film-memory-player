@@ -45,6 +45,10 @@ constexpr uint8_t MAX_PHOTOS = 50;
 constexpr uint32_t SLIDE_INTERVALS_MS[] = {2000, 3500, 5000, 10000, 30000};
 constexpr uint16_t AUTO_SLEEP_MINUTES[] = {0, 1, 3, 5};
 constexpr uint8_t OPTION_COUNT = 4;
+constexpr uint8_t BRIGHTNESS_LEVELS[] = {64, 128, 191, 255};
+constexpr uint8_t BRIGHTNESS_PERCENT[] = {25, 50, 75, 100};
+constexpr uint8_t BRIGHTNESS_OPTION_COUNT = 4;
+constexpr uint8_t SETTINGS_ITEM_COUNT = 3;
 
 constexpr char AP_SSID[] = "FilmMemory-Setup";
 constexpr char AP_PASSWORD[] = "film2026";

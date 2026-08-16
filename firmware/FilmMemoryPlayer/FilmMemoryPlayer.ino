@@ -31,9 +31,13 @@ void setup() {
   preferences.begin("film-memory", false);
   slideIntervalIndex = preferences.getUChar("slide", 1);
   autoSleepIndex = preferences.getUChar("sleep", 0);
+  brightnessIndex = preferences.getUChar("bright", BRIGHTNESS_OPTION_COUNT - 1);
   currentExpression = preferences.getUChar("emote", 0);
   if (slideIntervalIndex >= OPTION_COUNT) slideIntervalIndex = 1;
   if (autoSleepIndex >= OPTION_COUNT) autoSleepIndex = 0;
+  if (brightnessIndex >= BRIGHTNESS_OPTION_COUNT) {
+    brightnessIndex = BRIGHTNESS_OPTION_COUNT - 1;
+  }
   if (currentExpression >= EXPRESSION_COUNT) currentExpression = 0;
 
   // 若前一次休眠鎖住背光腳，開機時先解除，再由程式正常控制。

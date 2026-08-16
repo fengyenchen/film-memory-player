@@ -2,6 +2,7 @@
 
 #include "AppState.h"
 #include "Config.h"
+#include "DisplayUtils.h"
 #include "EmoteMode.h"
 #include "MenuMode.h"
 #include "PhotoMode.h"
@@ -44,8 +45,12 @@ void pollEncoder() {
     case AppMode::SETTINGS:
       if (settingsSelection == 0) {
         slideIntervalIndex = (slideIntervalIndex + OPTION_COUNT + direction) % OPTION_COUNT;
-      } else {
+      } else if (settingsSelection == 1) {
         autoSleepIndex = (autoSleepIndex + OPTION_COUNT + direction) % OPTION_COUNT;
+      } else {
+        brightnessIndex =
+            (brightnessIndex + BRIGHTNESS_OPTION_COUNT + direction) % BRIGHTNESS_OPTION_COUNT;
+        setBacklight(true);
       }
       saveSettings();
       drawSettings();
@@ -83,7 +88,7 @@ void pollButton() {
           Serial.printf("Slideshow: %s\n", autoplay ? "ON" : "OFF");
         }
       } else if (appMode == AppMode::SETTINGS) {
-        settingsSelection = (settingsSelection + 1) % 2;
+        settingsSelection = (settingsSelection + 1) % SETTINGS_ITEM_COUNT;
         drawSettings();
       }
     }

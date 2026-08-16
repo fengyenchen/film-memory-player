@@ -37,6 +37,7 @@ extern uint8_t menuSelection;
 extern uint8_t settingsSelection;
 extern uint8_t slideIntervalIndex;
 extern uint8_t autoSleepIndex;
+extern uint8_t brightnessIndex;
 extern uint8_t currentExpression;
 extern bool expressionSelectionDirty;
 extern uint32_t expressionSelectionChangedAt;

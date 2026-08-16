@@ -16,6 +16,9 @@ void enterSleep() {
   }
   WiFi.mode(WIFI_OFF);
   tft.fillScreen(ST77XX_BLACK);
+  tft.enableDisplay(false);
+  tft.enableSleep(true);
+  delay(10);
   setBacklight(false);
   // 鎖住背光 GPIO 的 LOW，避免進入 Light-sleep 後腳位浮動、背光自行亮起。
   gpio_hold_en(static_cast<gpio_num_t>(PIN_TFT_BL));
