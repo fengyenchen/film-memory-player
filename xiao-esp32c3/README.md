@@ -39,7 +39,6 @@ film_memory_player/
    │  ├─ test_button/                EC11 按壓測試
    │  ├─ test_screen/                TFT 紅色畫面測試
    │  └─ test_wifi/                  Wi-Fi 熱點測試
-   └─ TFT 顯示器驅動與函式庫調整/      面板參數參考資料
 ```
 
 外殼的 STL 檔可到專案最外層的 [`3d-print-parts/`](../3d-print-parts/) 取得。
