@@ -14,12 +14,14 @@ constexpr int PIN_ENCODER_B = 7;
 constexpr int PIN_ENCODER_SW = 8;
 constexpr int PIN_TFT_SCK = 9;
 constexpr int PIN_TFT_MOSI = 10;
+constexpr int PIN_BATTERY_ADC = 11;
+constexpr bool HAS_BATTERY_MONITOR = true;
 
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
 
 constexpr char BOARD_NAME[] = "Seeed Studio XIAO ESP32-C3";
 constexpr int PIN_TFT_BL = 2;       // D0
-constexpr int PIN_TFT_RST = 3;      // D1
+constexpr int PIN_TFT_RST = 20;     // D7
 constexpr int PIN_TFT_DC = 4;       // D2
 constexpr int PIN_TFT_CS = 5;       // D3
 constexpr int PIN_ENCODER_A = 6;    // D4
@@ -27,6 +29,8 @@ constexpr int PIN_ENCODER_B = 7;    // D5
 constexpr int PIN_ENCODER_SW = 21;  // D6
 constexpr int PIN_TFT_SCK = 8;      // D8
 constexpr int PIN_TFT_MOSI = 10;    // D10
+constexpr int PIN_BATTERY_ADC = 3;  // D1 / A1
+constexpr bool HAS_BATTERY_MONITOR = true;
 
 #else
 #error "Unsupported target: select ESP32S3 Dev Module or XIAO_ESP32C3/ESP32C3 Dev Module"
@@ -49,6 +53,8 @@ constexpr uint8_t BRIGHTNESS_LEVELS[] = {64, 128, 191, 255};
 constexpr uint8_t BRIGHTNESS_PERCENT[] = {25, 50, 75, 100};
 constexpr uint8_t BRIGHTNESS_OPTION_COUNT = 4;
 constexpr uint8_t SETTINGS_ITEM_COUNT = 3;
+constexpr float BATTERY_DIVIDER_RATIO = 2.0f;
+constexpr uint8_t BATTERY_SAMPLE_COUNT = 16;
 
 constexpr char AP_SSID[] = "FilmMemory-Setup";
 constexpr char AP_PASSWORD[] = "film2026";

@@ -9,7 +9,7 @@
 | VCC / VDD | 3V3 |
 | GND | GND |
 | BLK / BL | GPIO2 |
-| RES / RST | GPIO3 |
+| RES / RST | GPIO20（D7） |
 | DC / RS | GPIO4 |
 | CS / CE | GPIO5 |
 | SCL / SCK | GPIO8 |
@@ -39,6 +39,6 @@
 ## 常見問題
 
 - 完全不亮：先確認 GPIO2 背光控制與 3V3、GND。
-- 全白：優先檢查 GPIO3、GPIO4、GPIO5、GPIO8、GPIO10。
+- 全白：優先檢查 GPIO20、GPIO4、GPIO5、GPIO8、GPIO10。
 - 有畫面但位置偏移：確認使用的是本專案測試過的 128×128 面板。
 - 顏色不是紅色：可能是面板色彩順序不同，可再確認初始化設定。

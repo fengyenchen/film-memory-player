@@ -12,6 +12,7 @@ Film Memory Player 是一個以「旋轉底片」為互動概念的數位照片�
 - 網頁會將照片裁切並縮放成 128×128 JPEG。
 - 相片列表提供縮圖、日期時間檔名與單張刪除。
 - 可在設定頁調整 `25%`、`50%`、`75%` 或 `100%` 螢幕亮度。
+- 可在設定頁查看由 D1/A1（GPIO3）量測的約略電量與電壓。
 - 長按約 3.5 秒關閉背光並進入休眠；再按一下即可重新啟動。
 - 最多儲存 50 張照片。
 
@@ -21,6 +22,7 @@ Film Memory Player 是一個以「旋轉底片」為互動概念的數位照片�
 - 128×128 SPI TFT 顯示器
 - EC11 旋轉編碼器（含按壓功能）
 - 具保護板的單節 3.7V LiPo
+- 100kΩ、1% 電阻兩顆（電池電壓分壓）
 - USB-C 傳輸線
 - 杜邦線或焊接線材
 - 3D 列印外殼
@@ -95,7 +97,7 @@ film_memory_player/
 | 功能 | XIAO GPIO |
 | --- | ---: |
 | TFT 背光 BL | 2 |
-| TFT RST | 3 |
+| TFT RST | 20（D7） |
 | TFT DC | 4 |
 | TFT CS | 5 |
 | EC11 CLK | 6 |
@@ -103,8 +105,9 @@ film_memory_player/
 | TFT SCL | 8 |
 | TFT SDA | 10 |
 | EC11 SW | 21 |
+| 電池 ADC | 3（D1 / A1，須經兩顆 100kΩ 分壓） |
 
-TFT VCC 接 `3V3`，TFT 與 EC11 的 GND 都接到 XIAO GND。詳細接法以 [WIRING.md](docs/WIRING.md) 為準。
+TFT VCC 接 `3V3`，TFT、EC11 與電池分壓電路的 GND 都接到 XIAO GND。不可將 BAT+ 直接接 GPIO3；詳細接法以 [WIRING.md](docs/WIRING.md) 為準。
 
 ## 操作方式
 

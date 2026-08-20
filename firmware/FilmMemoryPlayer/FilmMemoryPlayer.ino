@@ -14,6 +14,7 @@
 #include <time.h>
 
 #include "AppState.h"
+#include "BatteryMonitor.h"
 #include "ClockMode.h"
 #include "Config.h"
 #include "DisplayUtils.h"
@@ -48,6 +49,7 @@ void setup() {
   pinMode(PIN_ENCODER_A, INPUT_PULLUP);
   pinMode(PIN_ENCODER_B, INPUT_PULLUP);
   pinMode(PIN_ENCODER_SW, INPUT_PULLUP);
+  initBatteryMonitor();
 
   // 使用目前開發板的硬體 SPI，完整 128x128 畫面約十多毫秒送完。
   SPI.begin(PIN_TFT_SCK, -1, PIN_TFT_MOSI, PIN_TFT_CS);

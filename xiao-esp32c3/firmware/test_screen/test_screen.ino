@@ -2,7 +2,7 @@
 
 // 腳位定義
 constexpr int PIN_BL = 2;
-#define PIN_RST  3  // D1 (GPIO3)
+#define PIN_RST 20  // D7 (GPIO20)
 #define PIN_DC   4  // D2 (GPIO4)
 #define PIN_CS   5  // D3 (GPIO5)
 #define PIN_SCL  8  // D8 (GPIO8)
